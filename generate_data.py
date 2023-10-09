@@ -24,5 +24,5 @@ save_dataset(dataset_list, f"data/dataset-{dataset_size}_size-{image_size[0]}x{i
                            f"±{image_background_grays.number_generator.standard_deviation:.3f}_seed-{seed}"
                            f"_line-{line_grays.number_generator.mean:.3f}"
                            f"±{line_grays.number_generator.standard_deviation:.3f}"
-                           f"_width-{line_widths.number_generator.mean:.3f}"
-                           f"±{line_widths.number_generator.standard_deviation:.3f}")
+                           f"_width-{line_widths.mean:.3f}"
+                           f"±{line_widths.standard_deviation:.3f}")

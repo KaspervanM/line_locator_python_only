@@ -1,4 +1,3 @@
-import copy
 import pickle
 from datetime import datetime
 import numpy as np
@@ -113,8 +112,7 @@ def train_and_evaluate_model(x_train, y_train, x_val, y_val, model, optimizer, l
 
 def main():
     print("loading data")
-    images, lines = load_dataset(
-        "data/dataset-1000_size-28x28_bg-0.500±0.050_seed-1_line-0.300±0.050_width-0.025±0.003.npz")
+    images, lines = load_dataset(DATA_PATH)
 
     images_train = images[:int(len(images) * 0.8)]
     lines_train = lines[:int(len(lines) * 0.8)]
@@ -161,7 +159,7 @@ def main():
                                 x_train, x_val = x[train_index], x[val_index]
                                 y_train, y_val = y[train_index], y[val_index]
 
-                                model = copy.deepcopy(model_architecture).to(DEVICE)
+                                model = model_architecture.to(DEVICE)
                                 reset_model_to_default_init(model, seed_value)
 
                                 optimizer = optimizer_class(model.parameters(), lr=lr)

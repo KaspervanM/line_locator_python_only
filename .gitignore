@@ -1,3 +1,4 @@
 # Project exclude paths
-/models/*
+models/*
+ray_results
 .idea
