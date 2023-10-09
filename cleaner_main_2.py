@@ -6,6 +6,7 @@ import numpy as np
 import ray
 from ray import tune
 import torch.utils.data as data
+from ray.tune.search.hyperopt import HyperOptSearch
 from sklearn.model_selection import train_test_split, KFold
 
 import test_cleaner
@@ -13,7 +14,7 @@ from LineRegressionModel import LineRegressionModel, custom_loss
 from data_utils.data_generation import load_dataset
 
 DATA_PATH = "data/dataset-1000_size-28x28_bg-0.500±0.050_seed-1_line-0.300±0.050_width-0.025±0.003.npz"
-NUM_SAMPLES = 100  # Number of hyperparameter configurations to try
+NUM_SAMPLES = 1000  # Number of hyperparameter configurations to try. Adjust this based on computational resources
 
 
 # Function to determine available resources on the current device
@@ -26,9 +27,6 @@ def get_resources_for_device():
 
 # Define a function to train and evaluate the model with k-fold cross-validation
 def train_eval(config):
-    # Retrieve the random seed from the hyperparameters
-    # seed = config["seed"]
-
     # Split the combined set into training and validation using k-fold cross-validation
     num_folds = 5
     kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)  # seed)
@@ -37,17 +35,13 @@ def train_eval(config):
     val_losses = []
 
     for train_index, val_index in kf.split(images_combined):
-        # random.seed(seed)
-        # torch.manual_seed(seed)
-        # torch.cuda.manual_seed_all(seed)
-        # np.random.seed(seed)
         train_dataset = data.TensorDataset(torch.tensor(images_combined[train_index], dtype=torch.float32),
                                            torch.tensor(lines_combined[train_index], dtype=torch.float32))
         val_dataset = data.TensorDataset(torch.tensor(images_combined[val_index], dtype=torch.float32),
                                          torch.tensor(lines_combined[val_index], dtype=torch.float32))
 
-        train_loader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_loader = data.DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
+        val_loader = data.DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
 
         model = LineRegressionModel(config["num_conv_layers"], config["num_conv_units"], config["num_fc_layers"],
                                     config["num_fc_units"])
@@ -95,17 +89,16 @@ if __name__ == "__main__":
                                                                                 random_state=42)
 
     # Define data loaders for training and validation combined set
-    batch_size = 64  # You can adjust this as needed
 
     # Define the hyperparameter search space, including the random seed
     config_space = {
-        "lr": tune.loguniform(1e-4, 1e-2),
-        "epochs": tune.choice([16, 32, 64, 128]),
+        "lr": tune.loguniform(1e-5, 1e-2),
+        "epochs": tune.choice([32, 64, 128, 192, 256]),
+        "batch_size": tune.choice([16, 32, 48, 64, 80, 96, 112, 128]),
         "num_conv_layers": tune.choice([1, 2, 3]),
-        "num_conv_units": tune.choice([16, 32, 64]),
-        "num_fc_layers": tune.choice([1, 2, 3]),
-        "num_fc_units": tune.choice([64, 128, 256, 512]),
-        # "seed": tune.choice([42, 123, 567, 789]),  # Different seed values to explore
+        "num_conv_units": tune.choice([4, 8, 16, 32, 64]),
+        "num_fc_layers": tune.choice([1, 2, 3, 4, 5]),
+        "num_fc_units": tune.choice([64, 128, 256, 384, 512]),
     }
 
     # Perform hyperparameter tuning using Ray Tune
@@ -114,8 +107,8 @@ if __name__ == "__main__":
         num_samples=NUM_SAMPLES,
         config=config_space,
         resources_per_trial=get_resources_for_device(),
-        #log_to_file=False,
-        #local_dir="./ray_results"
+        search_alg=HyperOptSearch(metric="loss", mode="min"),
+        #local_dir="./ray_results",
     )
 
     # Get the best hyperparameters
@@ -134,8 +127,8 @@ if __name__ == "__main__":
     test_dataset = data.TensorDataset(torch.tensor(images_test, dtype=torch.float32),
                                       torch.tensor(lines_test, dtype=torch.float32))
 
-    combined_loader = data.DataLoader(combined_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    combined_loader = data.DataLoader(combined_dataset, batch_size=best_config["batch_size"], shuffle=True)
+    test_loader = data.DataLoader(test_dataset, batch_size=best_config["batch_size"], shuffle=False)
 
     for epoch in range(best_config["epochs"]):
         # Training loop
