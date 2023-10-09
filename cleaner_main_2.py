@@ -149,7 +149,7 @@ if __name__ == "__main__":
     }
 
     formatted_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    with open(f'models/model_info_{formatted_datetime}.pkl', 'wb') as file:
+    with open(f'models/cleaner_model_info_{formatted_datetime}.pkl', 'wb') as file:
         pickle.dump(best_model_info, file)
 
     # Evaluate the final model on the test set

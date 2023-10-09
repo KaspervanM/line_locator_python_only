@@ -61,7 +61,7 @@ def get_most_recent_file():
     files = os.listdir(directory_path)
 
     # Filter the list to include only files with a specific prefix (e.g., "output_")
-    file_prefix = "model_info_"
+    file_prefix = "cleaner_model_info_"
     filtered_files = [file for file in files if file.startswith(file_prefix)]
 
     # Sort the filtered files by their filenames (assumes filenames include a date and time)
