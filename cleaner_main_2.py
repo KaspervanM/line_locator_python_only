@@ -6,6 +6,7 @@ import numpy as np
 import ray
 from ray import tune
 import torch.utils.data as data
+from ray.tune.schedulers import HyperBandScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 from sklearn.model_selection import train_test_split, KFold
 
@@ -13,8 +14,8 @@ import test_cleaner
 from LineRegressionModel import LineRegressionModel, custom_loss
 from data_utils.data_generation import load_dataset
 
-DATA_PATH = "data/dataset-1000_size-28x28_bg-0.500±0.050_seed-1_line-0.300±0.050_width-0.025±0.003.npz"
-NUM_SAMPLES = 1000  # Number of hyperparameter configurations to try. Adjust this based on computational resources
+DATA_PATH = "data/cleaner_dataset-1000_size-28x28_bg-0.500±0.100(0.450to1.000)_seed-2_line-0.300±0.050(0.000to(0.400)_width-0.025±0.013.npz"
+NUM_SAMPLES = 10  # Number of hyperparameter configurations to try. Adjust this based on computational resources
 
 
 # Function to determine available resources on the current device
@@ -107,8 +108,9 @@ if __name__ == "__main__":
         num_samples=NUM_SAMPLES,
         config=config_space,
         resources_per_trial=get_resources_for_device(),
+        scheduler=HyperBandScheduler(metric="loss", mode="min"),
         search_alg=HyperOptSearch(metric="loss", mode="min"),
-        #local_dir="./ray_results",
+        # local_dir="./ray_results",
     )
 
     # Get the best hyperparameters

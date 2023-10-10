@@ -1,9 +1,8 @@
 import os
 from sklearn.metrics import mean_absolute_error
-from torch import optim
-import torch.utils.data as data
 
-from data_utils.data_generation import generate_data, LinearRNG, GaussianRNG, GrayscaleNumberGenerator, show_image, \
+from data_utils.cleaner_data_generation import generate_data, LinearRNG, GaussianRNG, GrayscaleNumberGenerator, \
+    show_image, \
     line_on_image, GrayscaleGradient
 import math
 import numpy as np
@@ -15,10 +14,15 @@ from LineRegressionModel import LineRegressionModel, custom_loss
 def show_prediction(image, y_pred, y_target):
     print("Prediction:", y_pred, "Actual:", y_target, "MAE:", mean_absolute_error(y_pred, y_target))
     show_image(image)
+    y_pred = (round(y_pred[0] * image.shape[0]),
+              round(y_pred[1] * image.shape[1]),
+              round(y_pred[2] * image.shape[0]),
+              round(y_pred[3] * image.shape[1]))
+    image = (image * 255).astype(np.uint8)
     try:
         show_image(
-            line_on_image(image, (y_pred[0], y_pred[1]), y_pred[2] - 0.5, y_pred[3],
-                          GrayscaleGradient(1.0), GrayscaleGradient(0.0)))
+            line_on_image(image, (y_pred[0], y_pred[1]), (y_pred[2], y_pred[3]), GrayscaleGradient(1.0),
+                          GrayscaleGradient(0.0)))
     except ValueError:
         print("line out of range, skipping image")
 
@@ -32,17 +36,16 @@ def generate_dataset():
     dataset_size = 10
 
     image_size = (28, 28)
-    image_nr_background_colors = LinearRNG(1, 5)
-    image_background_grays = GrayscaleNumberGenerator(GaussianRNG(0.5, 0.1))
-    seed = 3
+    image_background_grays = GaussianRNG(0.5, 0.1, limit_left=0.45, limit_right=1)
+    seed = 2
     diagonal = math.hypot(*image_size)
     line_min_length = 4 / diagonal
     line_nr_colors = LinearRNG(1, 5)
-    line_grays = GrayscaleNumberGenerator(GaussianRNG(0.4, 0.05))
+    line_grays = GaussianRNG(0.3, 0.05, limit_left=0, limit_right=0.4)
     line_nr_widths = LinearRNG(1, 5)
     line_widths = GaussianRNG(1 / diagonal, 0.5 / diagonal, limit_left=0, limit_right=4 / diagonal)
-    prescale_image_size = (LinearRNG(image_size[0], image_size[0] * 30), LinearRNG(image_size[1], image_size[1] * 30))
-    dataset_list = generate_data(dataset_size, image_size, image_nr_background_colors, image_background_grays, seed,
+    prescale_image_size = image_size  # (LinearRNG(image_size[0], image_size[0] * 30), LinearRNG(image_size[1], image_size[1] * 30))
+    dataset_list = generate_data(dataset_size, image_size, image_background_grays, seed,
                                  line_min_length, line_nr_colors, line_grays, line_nr_widths, line_widths,
                                  prescale_image_size=prescale_image_size)
 
@@ -97,8 +100,6 @@ def main():
     model.eval()
     with torch.no_grad():
         y_pred = model(x_test)
-    print(x_test)
-    print(y_pred)
     y_pred = y_pred.detach().numpy()
 
     # Calculate the Mean Absolute Error (MAE) on the testing dataset
