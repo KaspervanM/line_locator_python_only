@@ -36,10 +36,10 @@ def train_eval(config):
     val_losses = []
 
     for train_index, val_index in kf.split(images_combined):
-        train_dataset = data.TensorDataset(torch.tensor(images_combined[train_index], dtype=torch.float32),
-                                           torch.tensor(lines_combined[train_index], dtype=torch.float32))
-        val_dataset = data.TensorDataset(torch.tensor(images_combined[val_index], dtype=torch.float32),
-                                         torch.tensor(lines_combined[val_index], dtype=torch.float32))
+        train_dataset = data.TensorDataset(images_combined[train_index],
+                                           lines_combined[train_index])
+        val_dataset = data.TensorDataset(images_combined[val_index],
+                                         lines_combined[val_index])
 
         train_loader = data.DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True)
         val_loader = data.DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
@@ -55,8 +55,6 @@ def train_eval(config):
             model.train()
             optimizer.zero_grad()
             for inputs, targets in train_loader:
-                inputs = inputs.to(device)
-                targets = targets.to(device)
                 outputs = model(inputs)
                 loss = custom_loss(outputs, targets)
                 loss.backward()
@@ -67,8 +65,6 @@ def train_eval(config):
             val_loss = 0.0
             with torch.no_grad():
                 for inputs, targets in val_loader:
-                    inputs = inputs.to(device)
-                    targets = targets.to(device)
                     val_outputs = model(inputs)
                     val_loss += custom_loss(val_outputs, targets).item()
 
@@ -88,6 +84,9 @@ if __name__ == "__main__":
     # Split your dataset into test set and combined (train + validation) set
     images_combined, images_test, lines_combined, lines_test = train_test_split(images, lines, test_size=0.2,
                                                                                 random_state=42)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    images_combined = torch.tensor(images_combined, device=device)
+    lines_combined = torch.tensor(lines_combined, device=device)
 
     # Define data loaders for training and validation combined set
 
